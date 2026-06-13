@@ -1,3 +1,17 @@
 <resources>
     <string name="app_name">BukuKu</string>
+    <string name="profil">Profil</string>
+    <string name="tutup">Tutup</string>
+    <string name="logout">Logout</string>
+    <string name="tambah_buku">Tambah buku</string>
+    <string name="judul">Judul</string>
+    <string name="penulis">Penulis</string>
+    <string name="batal">Batal</string>
+    <string name="simpan">Simpan</string>
+    <string name="hapus">Hapus</string>
+    <string name="hapus_judul">Hapus Buku</string>
+    <string name="hapus_konfirmasi">Apakah Anda yakin ingin menghapus %1$s?</string>
+    <string name="gambar">Gambar %1$s</string>
+    <string name="error">Gagal memuat data.. Koneksi error.</string>
+    <string name="try_again">Coba lagi</string>
 </resources>
