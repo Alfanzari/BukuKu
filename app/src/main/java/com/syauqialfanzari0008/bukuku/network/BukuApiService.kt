@@ -8,6 +8,7 @@ import com.syauqialfanzari0008.bukuku.model.OpStatus
 import okhttp3.Interceptor
 import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
+import okhttp3.Request
 import okhttp3.RequestBody
 import okhttp3.Response
 import retrofit2.Retrofit
@@ -58,25 +59,56 @@ private fun solveAntiBot(html: String): String? {
     }
 }
 
-private val antiBotInterceptor = Interceptor { chain ->
-    val request = chain.request()
-    var response = chain.proceed(request)
-    val body = response.peekBody(4096).string()
+private var cachedCookie: String? = null
 
-    if (body.contains("toNumbers")) {
-        val cookieValue = solveAntiBot(body)
-        if (cookieValue != null) {
-            response.close()
-            val newRequest = request.newBuilder()
-                .addHeader("Cookie", "__test=$cookieValue")
-                .build()
-            response = chain.proceed(newRequest)
+private fun primeCookie(chain: Interceptor.Chain) {
+    try {
+        val primeRequest = Request.Builder()
+            .url(BASE_URL)
+            .get()
+            .build()
+        val primeResponse = chain.proceed(primeRequest)
+        val body = primeResponse.body?.string() ?: ""
+        primeResponse.close()
+        val cookie = solveAntiBot(body)
+        if (cookie != null) cachedCookie = cookie
+    } catch (e: Exception) {
+        Log.e("ANTI_BOT", "Priming gagal: ${e.message}")
+    }
+}
+
+private val antiBotInterceptor = Interceptor { chain ->
+    if (cachedCookie == null) {
+        primeCookie(chain)
+    }
+
+    var request = chain.request()
+    if (cachedCookie != null) {
+        request = request.newBuilder()
+            .addHeader("Cookie", "__test=$cachedCookie")
+            .build()
+    }
+
+    var response = chain.proceed(request)
+    val contentType = response.header("Content-Type") ?: ""
+    if (contentType.contains("text/html")) {
+        val body = response.peekBody(4096).string()
+        if (body.contains("toNumbers")) {
+            val cookie = solveAntiBot(body)
+            if (cookie != null) {
+                cachedCookie = cookie
+                response.close()
+                request = request.newBuilder()
+                    .header("Cookie", "__test=$cookie")
+                    .build()
+                response = chain.proceed(request)
+            }
         }
     }
     response
 }
 
-private val client = OkHttpClient.Builder()
+val client = OkHttpClient.Builder()
     .addInterceptor(antiBotInterceptor)
     .build()
 
@@ -89,13 +121,13 @@ private val retrofit = Retrofit.Builder()
 interface BukuApiService {
     @GET("buku.php")
     suspend fun getBuku(
-        @Header("Authorization") userId: String
+        @Header("X-User-Id") userId: String
     ): List<Buku>
 
     @Multipart
     @POST("buku.php")
     suspend fun postBuku(
-        @Header("Authorization") userId: String,
+        @Header("X-User-Id") userId: String,
         @Part("judul") judul: RequestBody,
         @Part("penulis") penulis: RequestBody,
         @Part image: MultipartBody.Part
@@ -103,7 +135,7 @@ interface BukuApiService {
 
     @DELETE("buku.php")
     suspend fun deleteBuku(
-        @Header("Authorization") userId: String,
+        @Header("X-User-Id") userId: String,
         @Query("id") id: String
     ): OpStatus
 }
