@@ -11,29 +11,39 @@ import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -48,6 +58,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -55,6 +67,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -85,6 +98,12 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
+val RedPrimary = Color(0xFFE53935)
+val BackgroundWhite = Color(0xFFF5F5F5)
+val CardWhite = Color(0xFFFFFFFF)
+val TextDark = Color(0xFF1A1A1A)
+val TextGray = Color(0xFF757575)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen() {
@@ -107,12 +126,19 @@ fun MainScreen() {
     }
 
     Scaffold(
+        containerColor = BackgroundWhite,
         topBar = {
             TopAppBar(
-                title = { Text(text = stringResource(id = R.string.app_name)) },
+                title = {
+                    Text(
+                        text = stringResource(id = R.string.app_name),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 22.sp,
+                        color = TextDark
+                    )
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.primary,
+                    containerColor = CardWhite,
                 ),
                 actions = {
                     IconButton(onClick = {
@@ -122,26 +148,54 @@ fun MainScreen() {
                             showDialog = true
                         }
                     }) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_launcher_foreground),
-                            contentDescription = stringResource(R.string.profil),
-                            tint = MaterialTheme.colorScheme.primary
-                        )
+                        if (user.photoUrl.isNotEmpty()) {
+                            AsyncImage(
+                                model = ImageRequest.Builder(context)
+                                    .data(user.photoUrl)
+                                    .crossfade(true)
+                                    .build(),
+                                contentDescription = stringResource(R.string.profil),
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(CircleShape)
+                            )
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(CircleShape)
+                                    .background(RedPrimary),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Person,
+                                    contentDescription = stringResource(R.string.profil),
+                                    tint = Color.White,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
                     }
                 }
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = {
-                val options = CropImageContractOptions(
-                    null, CropImageOptions(
-                        imageSourceIncludeGallery = false,
-                        imageSourceIncludeCamera = true,
-                        fixAspectRatio = true
+            FloatingActionButton(
+                onClick = {
+                    val options = CropImageContractOptions(
+                        null, CropImageOptions(
+                            imageSourceIncludeGallery = true,
+                            imageSourceIncludeCamera = true,
+                            fixAspectRatio = true
+                        )
                     )
-                )
-                launcher.launch(options)
-            }) {
+                    launcher.launch(options)
+                },
+                containerColor = RedPrimary,
+                contentColor = Color.White,
+                elevation = FloatingActionButtonDefaults.elevation(8.dp)
+            ) {
                 Icon(
                     imageVector = Icons.Default.Add,
                     contentDescription = stringResource(id = R.string.tambah_buku)
@@ -149,7 +203,7 @@ fun MainScreen() {
             }
         }
     ) { innerPadding ->
-        ScreenContent(viewModel, user.email, Modifier.padding(innerPadding)) { buku ->
+        ScreenContent(viewModel, user.email, user.name, Modifier.padding(innerPadding)) { buku ->
             bukuToDelete = buku
             showDeleteDialog = true
         }
@@ -179,19 +233,19 @@ fun MainScreen() {
         if (showDeleteDialog && bukuToDelete != null) {
             AlertDialog(
                 onDismissRequest = { showDeleteDialog = false },
-                title = { Text(text = stringResource(R.string.hapus_judul)) },
+                title = { Text(text = stringResource(R.string.hapus_judul), fontWeight = FontWeight.Bold) },
                 text = { Text(text = stringResource(R.string.hapus_konfirmasi, bukuToDelete!!.judul)) },
                 confirmButton = {
                     TextButton(onClick = {
                         viewModel.deleteData(user.email, bukuToDelete!!.id)
                         showDeleteDialog = false
                     }) {
-                        Text(text = stringResource(R.string.hapus))
+                        Text(text = stringResource(R.string.hapus), color = RedPrimary, fontWeight = FontWeight.Bold)
                     }
                 },
                 dismissButton = {
                     TextButton(onClick = { showDeleteDialog = false }) {
-                        Text(text = stringResource(R.string.batal))
+                        Text(text = stringResource(R.string.batal), color = TextGray)
                     }
                 }
             )
@@ -276,6 +330,7 @@ private fun getCroppedImage(
 fun ScreenContent(
     viewModel: MainViewModel,
     userId: String,
+    userName: String,
     modifier: Modifier = Modifier,
     onDeleteClick: (Buku) -> Unit
 ) {
@@ -286,40 +341,97 @@ fun ScreenContent(
         viewModel.retrieveData(userId)
     }
 
-    when (status) {
-        ApiStatus.LOADING -> {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
+    Column(modifier = modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color.White)
+                .padding(horizontal = 16.dp, vertical = 12.dp)
+        ) {
+            if (userName.isNotEmpty()) {
+                Text(
+                    text = "Selamat datang kembali,",
+                    fontSize = 13.sp,
+                    color = TextGray
+                )
+                Text(
+                    text = "Mau baca buku apa hari ini, $userName?",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextDark
+                )
+            } else {
+                Text(
+                    text = "Temukan buku favoritmu",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextDark
+                )
             }
         }
-        ApiStatus.SUCCESS -> {
-            LazyVerticalGrid(
-                modifier = modifier.fillMaxSize().padding(4.dp),
-                columns = GridCells.Fixed(2),
-                contentPadding = PaddingValues(bottom = 80.dp)
-            ) {
-                items(data) {
-                    ListItem(
-                        buku = it,
-                        isOwner = it.mine == "1",
-                        onDeleteClick = { onDeleteClick(it) }
-                    )
+
+        when (status) {
+            ApiStatus.LOADING -> {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = RedPrimary)
                 }
             }
-        }
-        ApiStatus.FAILED -> {
-            Column(
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(text = stringResource(id = R.string.error))
-                Button(
-                    onClick = { viewModel.retrieveData(userId) },
-                    modifier = Modifier.padding(top = 16.dp),
-                    contentPadding = PaddingValues(horizontal = 32.dp, vertical = 16.dp)
+            ApiStatus.SUCCESS -> {
+                if (data.isEmpty()) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                text = "Belum ada buku",
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = TextGray
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "Tambahkan buku pertamamu!",
+                                fontSize = 14.sp,
+                                color = TextGray
+                            )
+                        }
+                    }
+                } else {
+                    LazyVerticalGrid(
+                        modifier = Modifier.fillMaxSize(),
+                        columns = GridCells.Fixed(2),
+                        contentPadding = PaddingValues(12.dp, 12.dp, 12.dp, 80.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        items(data) {
+                            ListItem(
+                                buku = it,
+                                isOwner = it.mine == "1",
+                                onDeleteClick = { onDeleteClick(it) }
+                            )
+                        }
+                    }
+                }
+            }
+            ApiStatus.FAILED -> {
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text(text = stringResource(id = R.string.try_again))
+                    Text(
+                        text = stringResource(id = R.string.error),
+                        color = TextGray,
+                        fontSize = 16.sp
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Button(
+                        onClick = { viewModel.retrieveData(userId) },
+                        colors = ButtonDefaults.buttonColors(containerColor = RedPrimary),
+                        shape = RoundedCornerShape(8.dp),
+                        contentPadding = PaddingValues(horizontal = 32.dp, vertical = 12.dp)
+                    ) {
+                        Text(text = stringResource(id = R.string.try_again), color = Color.White)
+                    }
                 }
             }
         }
@@ -328,46 +440,67 @@ fun ScreenContent(
 
 @Composable
 fun ListItem(buku: Buku, isOwner: Boolean, onDeleteClick: () -> Unit) {
-    Box(
-        modifier = Modifier.padding(4.dp).border(1.dp, Color.Gray),
-        contentAlignment = Alignment.BottomCenter
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(4.dp, RoundedCornerShape(12.dp)),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = CardWhite)
     ) {
-        AsyncImage(
-            model = ImageRequest.Builder(LocalContext.current)
-                .data(BukuApi.getBukuUrl(buku.imageId))
-                .crossfade(true)
-                .build(),
-            contentDescription = stringResource(R.string.gambar, buku.judul),
-            contentScale = ContentScale.Crop,
-            placeholder = painterResource(id = R.drawable.ic_launcher_foreground),
-            error = painterResource(id = R.drawable.ic_launcher_foreground),
-            modifier = Modifier.fillMaxWidth().padding(4.dp)
-        )
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(4.dp)
-                .background(Color(red = 0f, green = 0f, blue = 0f, alpha = 0.5f))
-                .padding(4.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(text = buku.judul, fontWeight = FontWeight.Bold, color = Color.White)
+        Column {
+            Box {
+                AsyncImage(
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(BukuApi.getBukuUrl(buku.imageId))
+                        .crossfade(true)
+                        .build(),
+                    contentDescription = stringResource(R.string.gambar, buku.judul),
+                    contentScale = ContentScale.Crop,
+                    placeholder = painterResource(id = R.drawable.ic_launcher_foreground),
+                    error = painterResource(id = R.drawable.ic_launcher_foreground),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(1f)
+                        .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))
+                )
+                if (isOwner) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(6.dp)
+                            .size(30.dp)
+                            .clip(CircleShape)
+                            .background(RedPrimary)
+                            .clickable { onDeleteClick() },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = stringResource(R.string.hapus),
+                            tint = Color.White,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
+            }
+            Column(modifier = Modifier.padding(10.dp)) {
+                Text(
+                    text = buku.judul,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp,
+                    color = TextDark,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = buku.penulis,
                     fontStyle = FontStyle.Italic,
-                    fontSize = 14.sp,
-                    color = Color.White
+                    fontSize = 12.sp,
+                    color = TextGray,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
-            }
-            if (isOwner) {
-                IconButton(onClick = onDeleteClick) {
-                    Icon(
-                        imageVector = Icons.Default.Delete,
-                        contentDescription = stringResource(R.string.hapus),
-                        tint = Color.White
-                    )
-                }
             }
         }
     }
