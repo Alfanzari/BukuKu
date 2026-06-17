@@ -117,7 +117,9 @@ fun MainScreen() {
     var showDialog by remember { mutableStateOf(false) }
     var showBukuDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
+    var showEditDialog by remember { mutableStateOf(false) }
     var bukuToDelete by remember { mutableStateOf<Buku?>(null) }
+    var bukuToEdit by remember { mutableStateOf<Buku?>(null) }
 
     var bitmap: Bitmap? by remember { mutableStateOf(null) }
     val launcher = rememberLauncherForActivityResult(CropImageContract()) {
@@ -203,10 +205,20 @@ fun MainScreen() {
             }
         }
     ) { innerPadding ->
-        ScreenContent(viewModel, user.email, user.name, Modifier.padding(innerPadding)) { buku ->
-            bukuToDelete = buku
-            showDeleteDialog = true
-        }
+        ScreenContent(
+            viewModel = viewModel,
+            userId = user.email,
+            userName = user.name,
+            modifier = Modifier.padding(innerPadding),
+            onDeleteClick = { buku ->
+                bukuToDelete = buku
+                showDeleteDialog = true
+            },
+            onEditClick = { buku ->
+                bukuToEdit = buku
+                showEditDialog = true
+            }
+        )
 
         if (showDialog) {
             ProfilDialog(
@@ -226,6 +238,22 @@ fun MainScreen() {
                 onConfirmation = { judul, penulis, deskripsi ->
                     viewModel.saveData(user.email, judul, penulis, deskripsi, bitmap!!)
                     showBukuDialog = false
+                }
+            )
+        }
+
+        if (showEditDialog && bukuToEdit != null) {
+            EditBukuDialog(
+                buku = bukuToEdit!!,
+                onDismissRequest = { showEditDialog = false },
+                onConfirmation = { judul, penulis, deskripsi ->
+                    viewModel.updateData(user.email, bukuToEdit!!.id, judul, penulis, deskripsi)
+                    showEditDialog = false
+                },
+                onDelete = {
+                    bukuToDelete = bukuToEdit
+                    showEditDialog = false
+                    showDeleteDialog = true
                 }
             )
         }
@@ -332,7 +360,8 @@ fun ScreenContent(
     userId: String,
     userName: String,
     modifier: Modifier = Modifier,
-    onDeleteClick: (Buku) -> Unit
+    onDeleteClick: (Buku) -> Unit,
+    onEditClick: (Buku) -> Unit
 ) {
     val data by viewModel.data
     val status by viewModel.status.collectAsState()
@@ -406,7 +435,8 @@ fun ScreenContent(
                             ListItem(
                                 buku = it,
                                 isOwner = it.mine == "1",
-                                onDeleteClick = { onDeleteClick(it) }
+                                onDeleteClick = { onDeleteClick(it) },
+                                onEditClick = { onEditClick(it) }
                             )
                         }
                     }
@@ -439,11 +469,12 @@ fun ScreenContent(
 }
 
 @Composable
-fun ListItem(buku: Buku, isOwner: Boolean, onDeleteClick: () -> Unit) {
+fun ListItem(buku: Buku, isOwner: Boolean, onDeleteClick: () -> Unit, onEditClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(4.dp, RoundedCornerShape(12.dp)),
+            .shadow(4.dp, RoundedCornerShape(12.dp))
+            .clickable { if (isOwner) onEditClick() },
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = CardWhite)
     ) {

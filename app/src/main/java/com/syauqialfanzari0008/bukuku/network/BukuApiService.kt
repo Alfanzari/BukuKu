@@ -23,6 +23,8 @@ import retrofit2.http.Query
 import javax.crypto.Cipher
 import javax.crypto.spec.IvParameterSpec
 import javax.crypto.spec.SecretKeySpec
+import retrofit2.http.Body
+import retrofit2.http.PUT
 
 private const val BASE_URL = "http://bukuku-syauqi.infinityfreeapp.com/"
 
@@ -132,6 +134,13 @@ interface BukuApiService {
         @Part("penulis") penulis: RequestBody,
         @Part("deskripsi") deskripsi: RequestBody,
         @Part image: MultipartBody.Part
+    ): OpStatus
+
+    @PUT("buku.php")
+    suspend fun updateBuku(
+        @Header("X-User-Id") userId: String,
+        @Query("id") id: String,
+        @Body body: okhttp3.RequestBody
     ): OpStatus
 
     @DELETE("buku.php")

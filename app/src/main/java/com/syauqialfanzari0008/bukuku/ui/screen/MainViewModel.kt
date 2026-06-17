@@ -76,6 +76,23 @@ class MainViewModel : ViewModel() {
         }
     }
 
+    fun updateData(userId: String, id: String, judul: String, penulis: String, deskripsi: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val jsonBody = """{"judul":"$judul","penulis":"$penulis","deskripsi":"$deskripsi"}"""
+                val requestBody = jsonBody.toRequestBody("application/json".toMediaTypeOrNull())
+                val result = BukuApi.service.updateBuku(userId, id, requestBody)
+                if (result.status == "success")
+                    retrieveData(userId)
+                else
+                    throw Exception(result.message)
+            } catch (e: Exception) {
+                Log.d("MainViewModel", "Failure: ${e.message}")
+                errorMessage.value = "Error: ${e.message}"
+            }
+        }
+    }
+
     private fun Bitmap.toMultipartBody(): MultipartBody.Part {
         val stream = ByteArrayOutputStream()
         compress(Bitmap.CompressFormat.JPEG, 80, stream)
