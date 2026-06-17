@@ -40,13 +40,14 @@ class MainViewModel : ViewModel() {
         }
     }
 
-    fun saveData(userId: String, judul: String, penulis: String, bitmap: Bitmap) {
+    fun saveData(userId: String, judul: String, penulis: String, deskripsi: String, bitmap: Bitmap) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val result = BukuApi.service.postBuku(
                     userId,
                     judul.toRequestBody("text/plain".toMediaTypeOrNull()),
                     penulis.toRequestBody("text/plain".toMediaTypeOrNull()),
+                    deskripsi.toRequestBody("text/plain".toMediaTypeOrNull()),
                     bitmap.toMultipartBody()
                 )
                 if (result.status == "success")

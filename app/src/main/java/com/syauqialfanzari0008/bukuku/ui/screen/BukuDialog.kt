@@ -12,8 +12,10 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -48,10 +50,11 @@ import com.syauqialfanzari0008.bukuku.ui.theme.BukuKuTheme
 fun BukuDialog(
     bitmap: Bitmap?,
     onDismissRequest: () -> Unit,
-    onConfirmation: (String, String) -> Unit
+    onConfirmation: (String, String, String) -> Unit
 ) {
     var judul by remember { mutableStateOf("") }
     var penulis by remember { mutableStateOf("") }
+    var deskripsi by remember { mutableStateOf("") }
 
     Dialog(onDismissRequest = { onDismissRequest() }) {
         Card(
@@ -63,7 +66,8 @@ fun BukuDialog(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(20.dp),
+                    .padding(20.dp)
+                    .verticalScroll(rememberScrollState()),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Text(
@@ -81,8 +85,8 @@ fun BukuDialog(
                         contentDescription = null,
                         contentScale = ContentScale.Crop,
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .aspectRatio(1f)
+                            .fillMaxWidth(0.5f)
+                            .aspectRatio(2f / 3f)
                             .clip(RoundedCornerShape(12.dp))
                     )
                 }
@@ -102,7 +106,9 @@ fun BukuDialog(
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = RedPrimary,
                         focusedLabelColor = RedPrimary,
-                        cursorColor = RedPrimary
+                        cursorColor = RedPrimary,
+                        unfocusedTextColor = TextDark,
+                        focusedTextColor = TextDark
                     ),
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -116,13 +122,37 @@ fun BukuDialog(
                     maxLines = 1,
                     keyboardOptions = KeyboardOptions(
                         capitalization = KeyboardCapitalization.Words,
+                        imeAction = ImeAction.Next
+                    ),
+                    shape = RoundedCornerShape(10.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = RedPrimary,
+                        focusedLabelColor = RedPrimary,
+                        cursorColor = RedPrimary,
+                        unfocusedTextColor = TextDark,
+                        focusedTextColor = TextDark
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                OutlinedTextField(
+                    value = deskripsi,
+                    onValueChange = { deskripsi = it },
+                    label = { Text(text = stringResource(id = R.string.deskripsi)) },
+                    maxLines = 4,
+                    keyboardOptions = KeyboardOptions(
+                        capitalization = KeyboardCapitalization.Sentences,
                         imeAction = ImeAction.Done
                     ),
                     shape = RoundedCornerShape(10.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = RedPrimary,
                         focusedLabelColor = RedPrimary,
-                        cursorColor = RedPrimary
+                        cursorColor = RedPrimary,
+                        unfocusedTextColor = TextDark,
+                        focusedTextColor = TextDark
                     ),
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -135,7 +165,9 @@ fun BukuDialog(
                 ) {
                     OutlinedButton(
                         onClick = { onDismissRequest() },
-                        modifier = Modifier.weight(1f).height(44.dp),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(44.dp),
                         shape = RoundedCornerShape(10.dp),
                         border = BorderStroke(1.5.dp, RedPrimary)
                     ) {
@@ -146,9 +178,11 @@ fun BukuDialog(
                         )
                     }
                     Button(
-                        onClick = { onConfirmation(judul, penulis) },
+                        onClick = { onConfirmation(judul, penulis, deskripsi) },
                         enabled = judul.isNotEmpty() && penulis.isNotEmpty(),
-                        modifier = Modifier.weight(1f).height(44.dp),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(44.dp),
                         shape = RoundedCornerShape(10.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = RedPrimary,
@@ -175,7 +209,7 @@ fun BukuDialogPreview() {
         BukuDialog(
             bitmap = null,
             onDismissRequest = {},
-            onConfirmation = { _, _ -> }
+            onConfirmation = { _, _, _ -> }
         )
     }
 }

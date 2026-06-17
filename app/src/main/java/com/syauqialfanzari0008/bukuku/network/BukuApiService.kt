@@ -130,6 +130,7 @@ interface BukuApiService {
         @Header("X-User-Id") userId: String,
         @Part("judul") judul: RequestBody,
         @Part("penulis") penulis: RequestBody,
+        @Part("deskripsi") deskripsi: RequestBody,
         @Part image: MultipartBody.Part
     ): OpStatus
 

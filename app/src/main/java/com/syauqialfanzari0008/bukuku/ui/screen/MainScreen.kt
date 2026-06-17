@@ -223,8 +223,8 @@ fun MainScreen() {
             BukuDialog(
                 bitmap = bitmap,
                 onDismissRequest = { showBukuDialog = false },
-                onConfirmation = { judul, penulis ->
-                    viewModel.saveData(user.email, judul, penulis, bitmap!!)
+                onConfirmation = { judul, penulis, deskripsi ->
+                    viewModel.saveData(user.email, judul, penulis, deskripsi, bitmap!!)
                     showBukuDialog = false
                 }
             )
@@ -460,7 +460,7 @@ fun ListItem(buku: Buku, isOwner: Boolean, onDeleteClick: () -> Unit) {
                     error = painterResource(id = R.drawable.ic_launcher_foreground),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .aspectRatio(1f)
+                        .aspectRatio(2f / 3f)
                         .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))
                 )
                 if (isOwner) {
