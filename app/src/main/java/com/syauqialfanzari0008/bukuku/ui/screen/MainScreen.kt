@@ -33,6 +33,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -97,8 +99,14 @@ import com.syauqialfanzari0008.bukuku.ui.theme.BukuKuTheme
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material.icons.filled.LibraryAdd
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
+import androidx.compose.material3.TabRowDefaults
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 
-val RedPrimary = Color(0xFFE53935)
+val RedPrimary = Color(0xFFD32F2F)
 val BackgroundWhite = Color(0xFFF5F5F5)
 val CardWhite = Color(0xFFFFFFFF)
 val TextDark = Color(0xFF1A1A1A)
@@ -183,10 +191,11 @@ fun MainScreen() {
             )
         },
         floatingActionButton = {
-            FloatingActionButton(
+            ExtendedFloatingActionButton(
                 onClick = {
                     val options = CropImageContractOptions(
-                        null, CropImageOptions(
+                        uri = null,
+                        CropImageOptions(
                             imageSourceIncludeGallery = true,
                             imageSourceIncludeCamera = true,
                             fixAspectRatio = true
@@ -196,13 +205,20 @@ fun MainScreen() {
                 },
                 containerColor = RedPrimary,
                 contentColor = Color.White,
-                elevation = FloatingActionButtonDefaults.elevation(8.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = stringResource(id = R.string.tambah_buku)
-                )
-            }
+                shape = RoundedCornerShape(18.dp),
+                icon = {
+                    Icon(
+                        imageVector = Icons.Default.LibraryAdd,
+                        contentDescription = null
+                    )
+                },
+                text = {
+                    Text(
+                        text = "Tambah Buku",
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            )
         }
     ) { innerPadding ->
         ScreenContent(
@@ -217,6 +233,9 @@ fun MainScreen() {
             onEditClick = { buku ->
                 bukuToEdit = buku
                 showEditDialog = true
+            },
+            onFavoriteClick = { buku ->
+                viewModel.toggleFavorite(user.email, buku)
             }
         )
 
@@ -361,10 +380,12 @@ fun ScreenContent(
     userName: String,
     modifier: Modifier = Modifier,
     onDeleteClick: (Buku) -> Unit,
-    onEditClick: (Buku) -> Unit
+    onEditClick: (Buku) -> Unit,
+    onFavoriteClick: (Buku) -> Unit
 ) {
     val data by viewModel.data
     val status by viewModel.status.collectAsState()
+    var selectedTabIndex by remember { mutableStateOf(0) }
 
     LaunchedEffect(userId) {
         viewModel.retrieveData(userId)
@@ -375,7 +396,7 @@ fun ScreenContent(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(Color.White)
-                .padding(horizontal = 16.dp, vertical = 12.dp)
+                .padding(top = 16.dp, start = 16.dp, end = 16.dp, bottom = 8.dp)
         ) {
             if (userName.isNotEmpty()) {
                 Text(
@@ -384,19 +405,66 @@ fun ScreenContent(
                     color = TextGray
                 )
                 Text(
-                    text = "Mau baca buku apa hari ini, $userName?",
+                    text = "Jelajahi rak buku komunitas hari ini, $userName!",
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                     color = TextDark
                 )
             } else {
                 Text(
-                    text = "Temukan buku favoritmu",
+                    text = "Jelajahi koleksi buku dari komunitas",
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                     color = TextDark
                 )
             }
+        }
+
+        if (userName.isNotEmpty()) {
+            TabRow(
+                selectedTabIndex = selectedTabIndex,
+                containerColor = Color.White,
+                contentColor = RedPrimary,
+                indicator = { tabPositions ->
+                    TabRowDefaults.Indicator(
+                        modifier = Modifier.tabIndicatorOffset(tabPositions[selectedTabIndex]),
+                        color = RedPrimary
+                    )
+                }
+            ) {
+                Tab(
+                    selected = selectedTabIndex == 0,
+                    onClick = { selectedTabIndex = 0 },
+                    text = {
+                        Text(
+                            text = "Komunitas",
+                            fontWeight = if (selectedTabIndex == 0) FontWeight.Bold else FontWeight.Normal,
+                            fontSize = 14.sp
+                        )
+                    },
+                    selectedContentColor = RedPrimary,
+                    unselectedContentColor = TextGray
+                )
+                Tab(
+                    selected = selectedTabIndex == 1,
+                    onClick = { selectedTabIndex = 1 },
+                    text = {
+                        Text(
+                            text = "Buku Saya",
+                            fontWeight = if (selectedTabIndex == 1) FontWeight.Bold else FontWeight.Normal,
+                            fontSize = 14.sp
+                        )
+                    },
+                    selectedContentColor = RedPrimary,
+                    unselectedContentColor = TextGray
+                )
+            }
+        }
+
+        val filteredData = if (userName.isNotEmpty() && selectedTabIndex == 1) {
+            data.filter { it.mine == "1" }
+        } else {
+            data
         }
 
         when (status) {
@@ -406,18 +474,18 @@ fun ScreenContent(
                 }
             }
             ApiStatus.SUCCESS -> {
-                if (data.isEmpty()) {
+                if (filteredData.isEmpty()) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(
-                                text = "Belum ada buku",
+                                text = if (selectedTabIndex == 1) "Kamu belum menambahkan buku" else "Belum ada buku",
                                 fontSize = 18.sp,
                                 fontWeight = FontWeight.Medium,
                                 color = TextGray
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                text = "Tambahkan buku pertamamu!",
+                                text = if (selectedTabIndex == 1) "Mulai isi rak buku pribadimu!" else "Tambahkan buku pertamamu!",
                                 fontSize = 14.sp,
                                 color = TextGray
                             )
@@ -427,16 +495,17 @@ fun ScreenContent(
                     LazyVerticalGrid(
                         modifier = Modifier.fillMaxSize(),
                         columns = GridCells.Fixed(2),
-                        contentPadding = PaddingValues(12.dp, 12.dp, 12.dp, 80.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                        contentPadding = PaddingValues(12.dp, 12.dp, 12.dp, 90.dp),
+                        horizontalArrangement = Arrangement.spacedBy(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
-                        items(data) {
+                        items(filteredData, key = { it.id }) {
                             ListItem(
                                 buku = it,
                                 isOwner = it.mine == "1",
                                 onDeleteClick = { onDeleteClick(it) },
-                                onEditClick = { onEditClick(it) }
+                                onEditClick = { onEditClick(it) },
+                                onFavoriteClick = { onFavoriteClick(it) }
                             )
                         }
                     }
@@ -469,14 +538,22 @@ fun ScreenContent(
 }
 
 @Composable
-fun ListItem(buku: Buku, isOwner: Boolean, onDeleteClick: () -> Unit, onEditClick: () -> Unit) {
+fun ListItem(
+    buku: Buku,
+    isOwner: Boolean,
+    onDeleteClick: () -> Unit,
+    onEditClick: () -> Unit,
+    onFavoriteClick: () -> Unit
+) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(4.dp, RoundedCornerShape(12.dp))
-            .clickable { if (isOwner) onEditClick() },
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = CardWhite)
+            .clickable {
+                if (isOwner) onEditClick()
+            },
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = CardWhite),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column {
             Box {
@@ -492,56 +569,81 @@ fun ListItem(buku: Buku, isOwner: Boolean, onDeleteClick: () -> Unit, onEditClic
                     modifier = Modifier
                         .fillMaxWidth()
                         .aspectRatio(2f / 3f)
-                        .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))
+                        .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
                 )
+
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(8.dp)
+                        .size(32.dp)
+                        .clip(CircleShape)
+                        .background(Color.White.copy(alpha = 0.85f))
+                        .clickable { onFavoriteClick() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = if (buku.isFavorite == 1) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                        contentDescription = "Favorit",
+                        tint = if (buku.isFavorite == 1) RedPrimary else TextGray,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+
                 if (isOwner) {
                     Box(
                         modifier = Modifier
                             .align(Alignment.TopEnd)
-                            .padding(6.dp)
-                            .size(30.dp)
+                            .padding(8.dp)
+                            .size(32.dp)
                             .clip(CircleShape)
-                            .background(RedPrimary)
+                            .background(Color.White.copy(alpha = 0.85f))
                             .clickable { onDeleteClick() },
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Default.Delete,
                             contentDescription = stringResource(R.string.hapus),
-                            tint = Color.White,
+                            tint = RedPrimary,
                             modifier = Modifier.size(16.dp)
                         )
                     }
                 }
             }
-            Column(modifier = Modifier.padding(10.dp)) {
+
+            Column(modifier = Modifier.padding(12.dp)) {
                 Text(
                     text = buku.judul,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 14.sp,
+                    fontSize = 15.sp,
                     color = TextDark,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                Spacer(modifier = Modifier.height(2.dp))
+
+                Spacer(modifier = Modifier.height(3.dp))
+
                 Text(
-                    text = buku.penulis,
+                    text = "Oleh ${buku.penulis}",
                     fontStyle = FontStyle.Italic,
                     fontSize = 12.sp,
                     color = TextGray,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
+
+                if (!buku.deskripsi.isNullOrBlank()) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = buku.deskripsi!!,
+                        fontSize = 11.sp,
+                        color = TextGray.copy(alpha = 0.9f),
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        lineHeight = 16.sp
+                    )
+                }
             }
         }
-    }
-}
-
-@Preview(showBackground = true)
-@Preview(uiMode = Configuration.UI_MODE_NIGHT_YES, showBackground = true)
-@Composable
-fun MainScreenPreview() {
-    BukuKuTheme {
-        MainScreen()
     }
 }

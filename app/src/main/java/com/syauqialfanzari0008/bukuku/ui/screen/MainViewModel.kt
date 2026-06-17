@@ -31,11 +31,33 @@ class MainViewModel : ViewModel() {
         viewModelScope.launch(Dispatchers.IO) {
             status.value = ApiStatus.LOADING
             try {
-                data.value = BukuApi.service.getBuku(userId)
+                val fetchedData = BukuApi.service.getBuku(userId)
+                data.value = fetchedData.sortedByDescending { it.isFavorite }
                 status.value = ApiStatus.SUCCESS
             } catch (e: Exception) {
                 Log.d("MainViewModel", "Failure: ${e.message}")
                 status.value = ApiStatus.FAILED
+            }
+        }
+    }
+
+    fun toggleFavorite(userId: String, buku: Buku) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val newFavoriteStatus = if (buku.isFavorite == 1) 0 else 1
+                data.value = data.value.map {
+                    if (it.id == buku.id) it.copy(isFavorite = newFavoriteStatus) else it
+                }.sortedByDescending { it.isFavorite }
+
+                val jsonBody = """{"judul":"${buku.judul}","penulis":"${buku.penulis}","deskripsi":"${buku.deskripsi ?: ""}","is_favorite":$newFavoriteStatus}"""
+                val requestBody = jsonBody.toRequestBody("application/json".toMediaTypeOrNull())
+                val result = BukuApi.service.updateBuku(userId, buku.id, requestBody)
+                if (result.status != "success") {
+                    throw Exception(result.message)
+                }
+            } catch (e: Exception) {
+                Log.d("MainViewModel", "Failure: ${e.message}")
+                retrieveData(userId)
             }
         }
     }
